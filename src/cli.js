@@ -101,7 +101,7 @@ export async function main(argv) {
   }
   if (opts.mode === 'scan') {
     if (!opts.paths.length) throw new Error('scan needs a model directory or file');
-    const results = opts.paths.map((p) => scanModelDir(p));
+    const results = opts.paths.map((p) => scanModelDir(p, { env: process.env }));
     if (opts.json) process.stdout.write(JSON.stringify(results.length === 1 ? results[0] : results, null, 2) + '\n');
     else process.stdout.write(results.map(renderScan).join('\n\n') + '\n');
     return results.some((r) => failsAt(r, opts.failOn)) ? 1 : 0;

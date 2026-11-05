@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isGguf, readGgufMetadata } from './gguf.js';
+import { checkEnv } from './env.js';
 
 const URL_RE = /\b(?:https?|wss?|ftp):\/\/[^\s"'<>`\\)\]}]+/gi;
 const SEVERITY = ['high', 'medium', 'low', 'info'];
@@ -195,7 +196,7 @@ function isText(buf) {
   return !buf.toString('utf8').includes('\uFFFD');
 }
 
-export function scanModelDir(root) {
+export function scanModelDir(root, { env = null } = {}) {
   const abs = path.resolve(root);
   const st = fs.statSync(abs);
   const files = st.isDirectory() ? walk(abs) : [{ file: abs, size: st.size }];
@@ -221,17 +222,24 @@ export function scanModelDir(root) {
       if (f.size <= MAX_TEXT) findings.push(...urlFindings(rel, null, fs.readFileSync(f.file, 'utf8'), { template: true }));
     } else if (ext === '.safetensors') {
       scanSafetensors(rel, f.file, findings);
-    } else if (PICKLE_EXT.has(ext) && f.size > 0) {
-      findings.push({ severity: 'medium', rule: 'pickle-weights', file: rel, where: null, message: 'pickle-based weights can run code when loaded (prefer .safetensors, or torch.load(weights_only=True))', evidence: null });
     } else if (ext === '.gguf' || isGguf(f.file)) {
       counted.gguf++;
       scanGguf(rel, f.file, findings);
+    } else if (PICKLE_EXT.has(ext) && f.size > 0) {
+      findings.push({ severity: 'medium', rule: 'pickle-weights', file: rel, where: null, message: 'pickle-based weights can run code when loaded (prefer .safetensors, or torch.load(weights_only=True))', evidence: null });
     } else if (/^sha256-[0-9a-f]{64}$/.test(name) && f.size <= 1024 * 1024) {
       const buf = fs.readFileSync(f.file);
       if (!isText(buf)) continue;
       const type = blobTypes.get(name) || '';
       if (/license/.test(type)) continue;
       findings.push(...urlFindings(rel, type || null, buf.toString('utf8'), { template: /template/.test(type) }));
+    }
+  }
+
+  if (env) {
+    const unset = checkEnv(env).filter((r) => !r.ok);
+    if (unset.length) {
+      findings.push({ severity: 'info', rule: 'telemetry-env-unset', file: '(environment)', where: null, message: `${unset.length} documented telemetry/offline switches are not set in this shell (see: phonehome env)`, evidence: unset.map((r) => r.name).join(', ') });
     }
   }
 
