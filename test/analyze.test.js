@@ -124,3 +124,30 @@ test('verdict, badge and reports', () => {
   assert.equal(toJson(empty).result, 'zero-egress');
   assert.equal(shellJoin(['sh', '-c', "echo 'hi'"]), `sh -c 'echo '\\''hi'\\'''`);
 });
+
+test('a closed UDP probe fd reused by a TCP socket is not mixed up', () => {
+  const dir = traceFromLines({
+    400: [
+      '1.0 connect(25<UDPv6:[[::]:0]>, {sa_family=AF_INET6, sin6_port=htons(0), sin6_flowinfo=htonl(0), inet_pton(AF_INET6, "2001:db8::7", &sin6_addr), sin6_scope_id=0}, 28) = 0',
+      '1.1 close(25<UDPv6:[[2001:db8::2]:5000]>) = 0',
+      '1.2 connect(25<TCP:[0.0.0.0:0]>, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("192.0.2.7")}, 16) = -1 EINPROGRESS (Operation now in progress)',
+      '1.3 write(25<TCP:[192.0.2.2:40000->192.0.2.7:443]>, "hello", 5) = 5',
+    ],
+  });
+  const a = analyze(loadTrace(dir));
+  assert.deepEqual(a.connections.map((c) => [c.proto, c.ip, c.port, c.bytesSent]), [['tcp', '192.0.2.7', 443, 5]]);
+  assert.deepEqual(a.probes.map((p) => `${p.ip}:${p.port}`), ['2001:db8::7:0']);
+});
+
+test('replies on accepted sockets are inbound, not egress', () => {
+  const dir = traceFromLines({
+    500: [
+      '1.0 accept4(3<TCP:[0.0.0.0:11434]>, {sa_family=AF_INET, sin_port=htons(51000), sin_addr=inet_addr("192.0.2.50")}, [16], SOCK_CLOEXEC) = 7<TCP:[192.0.2.2:11434->192.0.2.50:51000]>',
+      '1.1 write(7<TCP:[192.0.2.2:11434->192.0.2.50:51000]>, "HTTP/1.1 200 OK\\r\\n\\r\\n", 19) = 19',
+    ],
+  });
+  const v = verdict(analyze(loadTrace(dir)));
+  assert.equal(v.summary.zeroEgress, true);
+  assert.deepEqual(v.inbound, [{ ip: '192.0.2.50', count: 1 }]);
+  assert.match(renderText(v), /inbound/);
+});

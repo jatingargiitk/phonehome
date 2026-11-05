@@ -4,7 +4,8 @@
 
 import { stringLiterals } from './cstring.js';
 
-const RESULT_RE = /\)\s+=\s+(-?\d+|\?|0x[0-9a-f]+)(?:\s+([A-Z][A-Z0-9_]*))?(?:\s+\(([^)]*)\))?\s*$/;
+// The return value may carry an -yy annotation too: `= 7<TCP:[a->b]>`.
+const RESULT_RE = /\)\s+=\s+(-?\d+|\?|0x[0-9a-f]+)(<.*?>)?(?:\s+([A-Z][A-Z0-9_]*))?(?:\s+\(([^)]*)\))?\s*$/;
 const HEAD_RE = /^(?:(\d+)\s+)?(?:\[pid\s+(\d+)\]\s+)?(?:(\d+(?::\d+){0,2}(?:\.\d+)?)\s+)?([a-z_0-9]+)\(/;
 
 /**
@@ -28,7 +29,8 @@ export function parseLine(line) {
     name: head[4],
     args,
     ret,
-    errno: tail[2] || null,
+    errno: tail[3] || null,
+    retFd: tail[2] && ret != null ? parseFd(`${ret}${tail[2]}`) : null,
     fd: parseFd(args),
     addrs: parseSockaddrs(args),
   };

@@ -6,7 +6,7 @@ import path from 'node:path';
 
 export const TRACED_SYSCALLS = [
   'execve', 'execveat', 'clone', 'clone3', 'fork', 'vfork',
-  'connect', 'sendto', 'sendmsg', 'sendmmsg', 'recvfrom', 'recvmsg', 'recvmmsg',
+  'connect', 'accept', 'accept4', 'close', 'sendto', 'sendmsg', 'sendmmsg', 'recvfrom', 'recvmsg', 'recvmmsg',
   'read', 'write', 'writev',
 ];
 

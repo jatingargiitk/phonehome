@@ -63,6 +63,9 @@ export function renderText(v, { command, color = false } = {}) {
   }
   const meta = v.connections.filter((x) => x.kind === 'metadata');
   if (meta.length) out.push(c('33', `note: contacted a cloud metadata address (${meta.map(addr).join(', ')})`), '');
+  if (v.inbound?.length) {
+    out.push(`note: accepted ${plural(v.inbound.reduce((a, b) => a + b.count, 0), 'inbound connection')} from ${v.inbound.map((i) => i.ip).join(', ')} (inbound, not counted as egress)`);
+  }
   if (v.probes.length) {
     out.push(`note: ${plural(v.probes.length, 'UDP socket')} connected without sending data (source-address probes, not counted): ${v.probes.map(addr).join(', ')}`);
     out.push('');
@@ -113,6 +116,7 @@ export function toJson(v, extra = {}) {
     lookups: v.lookups,
     connections: v.connections,
     probes: v.probes,
+    inbound: v.inbound || [],
     resolvers: v.resolvers,
     local: v.local,
     processes: v.processes,

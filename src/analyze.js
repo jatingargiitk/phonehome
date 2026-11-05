@@ -66,6 +66,8 @@ export function analyze(records, { rootPid = null } = {}) {
   const udpPending = new Map(); // `${tgid}:${fd}` -> dest key (connected UDP sockets not yet used)
   const resolvers = new Map();
   const local = new Map();
+  const inbound = new Map(); // remote client ip -> accepted connections
+  const closedProbes = [];
 
   const tg = (tid) => {
     let t = tid;
@@ -152,6 +154,26 @@ export function analyze(records, { rootPid = null } = {}) {
     const tgid = tg(r.tid);
     const fdKey = r.fd ? `${tgid}:${r.fd.num}` : null;
 
+    if (r.name === 'close') {
+      if (fdKey && r.ret === 0) {
+        if (udpPending.has(fdKey)) closedProbes.push(udpPending.get(fdKey));
+        udpPending.delete(fdKey);
+        fdPeer.delete(fdKey);
+      }
+      continue;
+    }
+
+    if (r.name === 'accept' || r.name === 'accept4') {
+      if (r.ret != null && r.ret >= 0) {
+        const k = `${tgid}:${r.ret}`;
+        udpPending.delete(k);
+        const peer = r.retFd?.peer;
+        fdPeer.set(k, { inbound: true, ip: peer ? normalizeIp(peer.ip) : null });
+        if (peer && !isLocal(normalizeIp(peer.ip))) inbound.set(normalizeIp(peer.ip), (inbound.get(normalizeIp(peer.ip)) || 0) + 1);
+      }
+      continue;
+    }
+
     if (r.name === 'connect') {
       const inet = r.addrs.find((a) => a.family === 4 || a.family === 6);
       const unix = r.addrs.find((a) => a.family === 'unix');
@@ -176,7 +198,15 @@ export function analyze(records, { rootPid = null } = {}) {
 
     if (SEND.has(r.name) || RECV.has(r.name)) {
       if (r.ret != null && r.ret < 0 && RECV.has(r.name)) continue;
-      const peer = fdKey ? fdPeer.get(fdKey) : null;
+      let peer = fdKey ? fdPeer.get(fdKey) : null;
+      // fd numbers get reused; trust the live -yy annotation over our map.
+      const live = r.fd?.peer;
+      const fdProto = protoOf(r);
+      if (peer && !peer.unix && !peer.inbound && fdProto !== 'ip' && peer.proto !== fdProto) peer = null;
+      if (live && !(peer && peer.inbound) && !(peer && peer.ip === normalizeIp(live.ip) && peer.port === live.port)) {
+        peer = { ip: normalizeIp(live.ip), port: live.port, proto: fdProto };
+      }
+      if (peer && peer.inbound) continue; // replies to a client that connected to us
       const explicit = r.addrs.find((a) => a.family === 4 || a.family === 6);
       const target = explicit ? { ip: normalizeIp(explicit.ip), port: explicit.port, proto: protoOf(r) } : peer;
       if (!target) continue;
@@ -236,11 +266,13 @@ export function analyze(records, { rootPid = null } = {}) {
   }
 
   // UDP sockets that were connected but never carried data.
-  const probes = [];
-  for (const p of udpPending.values()) {
+  const probeMap = new Map();
+  for (const p of [...closedProbes, ...udpPending.values()]) {
     if (isLocal(p.ip)) continue;
-    probes.push({ proto: p.proto, ip: p.ip, port: p.port, process: procLabel(p.tgid) });
+    const k = `${p.ip} ${p.port} ${p.tgid}`;
+    if (!probeMap.has(k)) probeMap.set(k, { proto: p.proto, ip: p.ip, port: p.port, process: procLabel(p.tgid) });
   }
+  const probes = [...probeMap.values()];
 
   for (const d of dests.values()) {
     for (const n of ipNames.get(d.ip) || []) d.hosts.add(n);
@@ -274,5 +306,6 @@ export function analyze(records, { rootPid = null } = {}) {
     probes,
     resolvers: [...resolvers.entries()].map(([addr, count]) => ({ addr, count })),
     local: [...local.entries()].map(([addr, count]) => ({ addr, count })),
+    inbound: [...inbound.entries()].map(([ip, count]) => ({ ip, count })),
   };
 }
