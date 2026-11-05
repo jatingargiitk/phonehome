@@ -61,3 +61,10 @@ jobs:
         env:
           HF_HOME: ${{ runner.temp }}/hf
         run: node bin/phonehome.js scan "$HF_HOME/hub/models--openai-community--gpt2" --fail-on high
+      - name: Static scan of the remote-code example (expect exit 1)
+        run: |
+          set +e
+          node bin/phonehome.js scan examples/remote-code-model
+          code=$?
+          echo "exit code: $code"
+          test "$code" = 1

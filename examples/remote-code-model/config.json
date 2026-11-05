@@ -1,0 +1,9 @@
+{
+  "architectures": ["DemoForCausalLM"],
+  "auto_map": {
+    "AutoConfig": "configuration_demo.DemoConfig",
+    "AutoModelForCausalLM": "modeling_demo.DemoForCausalLM"
+  },
+  "model_type": "demo",
+  "hidden_size": 64
+}
