@@ -1,0 +1,37 @@
+{
+  "name": "phonehome",
+  "version": "0.1.0",
+  "description": "Prove your local model stack makes zero network calls. Trace every DNS lookup and outbound connection a command makes, by process.",
+  "type": "module",
+  "bin": {
+    "phonehome": "bin/phonehome.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true,
+  "license": "MIT",
+  "author": "Jatin Garg",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jatingargiitk/phonehome.git"
+  },
+  "keywords": [
+    "local-llm",
+    "privacy",
+    "security",
+    "network-monitoring",
+    "strace",
+    "ollama",
+    "egress"
+  ]
+}
