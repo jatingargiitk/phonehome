@@ -1,0 +1,3 @@
+1793849337.932866 execve("/usr/bin/sh", ["sh", "-c", "node a.js; curl -s -o /dev/null http://example.com"], 0x7fffaf756b28 /* 65 vars */) = 0
+1793849337.934592 vfork()               = 92188
+1793849338.158678 vfork()               = 92201

@@ -1,0 +1,9 @@
+1793849338.159539 execve("/usr/bin/curl", ["curl", "-s", "-o", "/dev/null", "http://example.com"], 0x55a63db966a8 /* 65 vars */) = 0
+1793849338.177430 connect(3<UNIX-STREAM:[25345117]>, {sa_family=AF_UNIX, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+1793849338.179789 connect(3<UNIX-STREAM:[25345118]>, {sa_family=AF_UNIX, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+1793849338.183519 clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fdd69bbe990, parent_tid=0x7fdd69bbe990, exit_signal=0, stack=0x7fdd693be000, stack_size=0x7ffd40, tls=0x7fdd69bbe6c0} => {parent_tid=[92202]}, 88) = 92202
+1793849338.196740 connect(4<TCP:[25345120]>, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("198.18.0.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
+1793849338.197718 sendto(4<TCP:[172.30.0.2:49168->198.18.0.1:80]>, "GET / HTTP/1.1\r\nHost: example.com\r\nUser-Agent: curl/8.14.1\r\nAccept: */*\r\n\r\n", 75, MSG_NOSIGNAL, NULL, 0) = 75
+1793849338.198194 recvfrom(4<TCP:[172.30.0.2:49168->198.18.0.1:80]>, 0x56479861cae0, 102400, 0, NULL, NULL) = -1 EAGAIN (Resource temporarily unavailable)
+1793849338.198464 recvfrom(4<TCP:[172.30.0.2:49168->198.18.0.1:80]>, "HTTP/1.1 500 Internal Server Error\r\nServer: Pingora\r\nDate: Thu, 05 Nov 2026 03:28:58 GMT\r\nContent-Length: 0\r\nCache-Control: private, no-store\r\nConnection: close\r\n\r\n", 102400, 0, NULL, NULL) = 164
+1793849338.198562 recvfrom(4<TCP:[172.30.0.2:49168->198.18.0.1:80]>, "", 1024, 0, NULL, NULL) = 0
