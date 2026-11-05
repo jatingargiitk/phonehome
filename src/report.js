@@ -33,7 +33,11 @@ function table(rows, headers) {
 const mark = (allowed) => (allowed ? 'allowed' : 'UNEXPECTED');
 const addr = (c) => (c.ip.includes(':') ? `[${c.ip}]:${c.port}` : `${c.ip}:${c.port}`);
 const host = (c) => (c.hosts.length ? c.hosts.join(', ') : '-');
-const resultOf = (c) => c.outcomes.map((o) => (o === 'EINPROGRESS' ? 'ok' : o)).filter((o, i, a) => a.indexOf(o) === i).join(',') || '-';
+const resultOf = (c) => {
+  if (c.bytesSent > 0) return `sent ${c.bytesSent} B`;
+  const o = c.outcomes.map((x) => (x === 'ok' ? 'connected' : x === 'EINPROGRESS' ? 'attempted' : x));
+  return [...new Set(o)].join(',') || '-';
+};
 
 export function shellJoin(argv) {
   return argv.map((a) => (/^[\w@%+=:,./-]+$/.test(a) ? a : `'${a.replace(/'/g, `'\\''`)}'`)).join(' ');

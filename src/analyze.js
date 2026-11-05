@@ -131,7 +131,7 @@ export function analyze(records, { rootPid = null } = {}) {
     }
     const key = destKey(proto, ip, port);
     const d = dests.get(key) || {
-      proto, ip, port, kind: classifyIp(ip), hosts: new Set(), processes: new Set(), count: 0, outcomes: new Set(), via: new Set(),
+      proto, ip, port, kind: classifyIp(ip), hosts: new Set(), processes: new Set(), count: 0, outcomes: new Set(), via: new Set(), bytesSent: 0,
     };
     d.count++;
     d.processes.add(procLabel(tgid));
@@ -225,6 +225,7 @@ export function analyze(records, { rootPid = null } = {}) {
         key = destKey(target.proto, target.ip, target.port);
       }
       const d = key && dests.get(key);
+      if (d && r.ret > 0) d.bytesSent += r.ret;
       if (d && target.proto !== 'udp') {
         for (const b of buffers(r)) {
           const host = parseTlsSni(b) || parseHttpHost(b);
@@ -268,7 +269,7 @@ export function analyze(records, { rootPid = null } = {}) {
       .map((l) => ({ name: l.name, types: arr(l.types), processes: arr(l.processes), count: l.count, answers: arr(l.answers), servers: arr(l.servers) }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     connections: [...dests.values()]
-      .map((d) => ({ proto: d.proto, ip: d.ip, port: d.port, kind: d.kind, hosts: arr(d.hosts), processes: arr(d.processes), count: d.count, outcomes: arr(d.outcomes) }))
+      .map((d) => ({ proto: d.proto, ip: d.ip, port: d.port, kind: d.kind, hosts: arr(d.hosts), processes: arr(d.processes), count: d.count, outcomes: arr(d.outcomes), bytesSent: d.bytesSent }))
       .sort((a, b) => b.count - a.count || a.ip.localeCompare(b.ip) || a.port - b.port),
     probes,
     resolvers: [...resolvers.entries()].map(([addr, count]) => ({ addr, count })),
