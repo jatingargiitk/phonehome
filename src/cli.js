@@ -51,8 +51,21 @@ export function parseArgs(argv) {
     if (i + 1 >= own.length) throw new Error(`${flag} needs a value`);
     return own[i + 1];
   };
+  let sawPositional = false;
   for (let i = 0; i < own.length; i++) {
     const a = own[i];
+    if (!a.startsWith('-') && !sawPositional) {
+      sawPositional = true;
+      if (['scan', 'env', 'analyze', 'run'].includes(a)) {
+        opts.mode = a;
+        continue;
+      }
+      if (dash === -1) {
+        // `phonehome node app.js`: everything from here is the command.
+        opts.command = own.slice(i);
+        break;
+      }
+    }
     if (a === '-h' || a === '--help') opts.mode = 'help';
     else if (a === '-v' || a === '--version') opts.mode = 'version';
     else if (a === '--allow') opts.allow.push(...need(i++, a).split(',').filter(Boolean));
@@ -67,12 +80,11 @@ export function parseArgs(argv) {
     else if (a === '--no-color') opts.color = false;
     else if (a === '--fail-on') opts.failOn = need(i++, a);
     else if (a.startsWith('-')) throw new Error(`unknown option ${a} (see phonehome --help)`);
-    else if (i === 0 && ['scan', 'env', 'analyze', 'run'].includes(a)) opts.mode = a;
     else opts.paths.push(a);
   }
   if (opts.mode === 'run' && !opts.command.length && !opts.pid) {
-    if (opts.paths.length) opts.command = opts.paths.splice(0);
-    else opts.mode = 'help';
+    if (opts.paths.length) throw new Error(`put the command after --, e.g. phonehome -- ${opts.paths.join(' ')}`);
+    opts.mode = 'help';
   }
   if (!['high', 'medium', 'low', 'info', 'none'].includes(opts.failOn)) throw new Error(`bad --fail-on ${opts.failOn}`);
   return opts;
